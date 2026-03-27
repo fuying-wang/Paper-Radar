@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { MOCK_PAPERS } from "@/lib/mock-papers";
 
 type PaperDetailPageProps = {
-  params: {
+  params: Promise<{
     paperId: string;
-  };
+  }>;
 };
 
-export default function PaperDetailPage({ params }: PaperDetailPageProps) {
-  const decodedId = decodeURIComponent(params.paperId);
+export default async function PaperDetailPage({ params }: PaperDetailPageProps) {
+  const resolvedParams = await params;
+  const decodedId = decodeURIComponent(resolvedParams.paperId);
   const paper = MOCK_PAPERS.find((item) => item.id === decodedId);
 
   if (!paper) {
