@@ -3,16 +3,29 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { MOCK_PAPERS, type PaperRecord } from "@/lib/mock-papers";
-
 type SortTab = "latest" | "hot" | "influential";
 type SortMode = "score" | "citations" | "year";
+type ResultPaper = {
+  id: string;
+  title: string;
+  authors: string[];
+  venue: string;
+  year: number;
+  abstract: string;
+  cited_by_count: number;
+  url: string;
+  latest_score: number;
+  hot_score: number;
+  influential_score: number;
+  final_score: number;
+};
 
 type ResultsClientProps = {
   query: string;
+  papers: ResultPaper[];
 };
 
-export default function ResultsClient({ query }: ResultsClientProps) {
+export default function ResultsClient({ query, papers }: ResultsClientProps) {
   const [activeTab, setActiveTab] = useState<SortTab>("latest");
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [venueFilter, setVenueFilter] = useState<string>("all");
@@ -20,23 +33,23 @@ export default function ResultsClient({ query }: ResultsClientProps) {
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   const yearOptions = useMemo(
-    () => [...new Set(MOCK_PAPERS.map((paper) => paper.year))].sort((a, b) => b - a),
-    [],
+    () => [...new Set(papers.map((paper) => paper.year))].sort((a, b) => b - a),
+    [papers],
   );
 
   const venueOptions = useMemo(
-    () => [...new Set(MOCK_PAPERS.map((paper) => paper.venue))].sort(),
-    [],
+    () => [...new Set(papers.map((paper) => paper.venue))].sort(),
+    [papers],
   );
 
   const displayedPapers = useMemo(() => {
-    const scoreField: Record<SortTab, keyof PaperRecord> = {
+    const scoreField: Record<SortTab, keyof ResultPaper> = {
       latest: "latest_score",
       hot: "hot_score",
       influential: "influential_score",
     };
 
-    const filtered = MOCK_PAPERS.filter((paper) => {
+    const filtered = papers.filter((paper) => {
       const yearMatched = yearFilter === "all" || String(paper.year) === yearFilter;
       const venueMatched = venueFilter === "all" || paper.venue === venueFilter;
       return yearMatched && venueMatched;
@@ -54,7 +67,7 @@ export default function ResultsClient({ query }: ResultsClientProps) {
     });
 
     return sorted;
-  }, [activeTab, sortMode, venueFilter, yearFilter]);
+  }, [activeTab, papers, sortMode, venueFilter, yearFilter]);
 
   const toggleFavorite = (paperId: string) => {
     setFavorites((previous) => ({
@@ -132,6 +145,11 @@ export default function ResultsClient({ query }: ResultsClientProps) {
         </section>
 
         <section className="mt-6 space-y-4">
+          {displayedPapers.length === 0 ? (
+            <article className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-600 shadow-sm">
+              No papers found for this query. Try another keyword.
+            </article>
+          ) : null}
           {displayedPapers.map((paper) => (
             <article
               key={paper.id}
