@@ -21,10 +21,17 @@ class PaperModel(Base):
     cited_by_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     doi: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    source_published_at: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    source_updated_at: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    journal_name: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    primary_category: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    pdf_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     latest_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     hot_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     influential_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     final_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    primary_topic: Mapped[str] = mapped_column(String(64), nullable=False, default="General AI", index=True)
+    topic_tags: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

@@ -65,7 +65,9 @@ def _compute_scores(year: int, cited_by_count: int) -> tuple[float, float, float
 
 
 def _to_paper(work: dict[str, Any]) -> Paper:
-    paper_id = _safe_str(work.get("id")) or "unknown"
+    raw_id = _safe_str(work.get("id"))
+    source_id = raw_id.rsplit("/", 1)[-1] if raw_id else ""
+    paper_id = f"openalex:{source_id}" if source_id else "openalex:unknown"
     title = _safe_str(work.get("title")) or "Untitled"
     authors = _extract_authors(work.get("authorships"))
     publication_year = int(work.get("publication_year") or 0)
@@ -98,6 +100,8 @@ def _to_paper(work: dict[str, Any]) -> Paper:
         hot_score=hot_score,
         influential_score=influential_score,
         final_score=final_score,
+        source_name="openalex",
+        source_id=source_id,
     )
 
 

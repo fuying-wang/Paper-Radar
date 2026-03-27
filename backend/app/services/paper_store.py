@@ -9,17 +9,20 @@ from sqlalchemy.orm import Session
 from app.models.paper import PaperModel
 from app.models.search_cache import SearchCacheModel
 from app.schemas.paper import Paper
+from app.services.topic_classifier import classify_paper_topics
 
 
 def _normalize_text(value: str) -> str:
     return " ".join(value.strip().lower().split())
 
 
-def _extract_source(paper_id: str) -> tuple[str, str]:
-    if ":" in paper_id:
-        source_name, source_id = paper_id.split(":", 1)
+def _extract_source(paper: Paper) -> tuple[str, str]:
+    if paper.source_name and paper.source_id:
+        return paper.source_name.strip().lower(), paper.source_id.strip()
+    if ":" in paper.id:
+        source_name, source_id = paper.id.split(":", 1)
         return source_name.strip().lower(), source_id.strip()
-    return "unknown", paper_id.strip()
+    return "unknown", paper.id.strip()
 
 
 def _extract_doi(url: str) -> str:
@@ -61,6 +64,15 @@ def _paper_from_model(model: PaperModel) -> Paper:
         hot_score=model.hot_score,
         influential_score=model.influential_score,
         final_score=model.final_score,
+        source_name=model.source_name,
+        source_id=model.source_id,
+        published_at=model.source_published_at,
+        updated_at=model.source_updated_at,
+        journal_name=model.journal_name,
+        primary_category=model.primary_category,
+        pdf_url=model.pdf_url,
+        primary_topic=model.primary_topic,
+        topic_tags=model.topic_tags,
     )
 
 
@@ -95,9 +107,10 @@ def get_cached_papers(
 
 
 def upsert_single_paper(db: Session, paper: Paper) -> tuple[PaperModel, bool]:
-    source_name, source_id = _extract_source(paper.id)
+    source_name, source_id = _extract_source(paper)
     normalized_title = _normalize_text(paper.title)
     latest_score, hot_score, influential_score, final_score = _compute_scores(paper.year, paper.cited_by_count)
+    topic_assignment = classify_paper_topics(paper)
 
     stmt = select(PaperModel).where(
         or_(
@@ -118,10 +131,17 @@ def upsert_single_paper(db: Session, paper: Paper) -> tuple[PaperModel, bool]:
             cited_by_count=paper.cited_by_count,
             doi=_extract_doi(paper.url),
             url=paper.url,
+            source_published_at=paper.published_at,
+            source_updated_at=paper.updated_at,
+            journal_name=paper.journal_name,
+            primary_category=paper.primary_category,
+            pdf_url=paper.pdf_url,
             latest_score=latest_score,
             hot_score=hot_score,
             influential_score=influential_score,
             final_score=final_score,
+            primary_topic=topic_assignment.primary_topic,
+            topic_tags=topic_assignment.secondary_topics,
         )
         db.add(existing)
         db.flush()
@@ -137,10 +157,17 @@ def upsert_single_paper(db: Session, paper: Paper) -> tuple[PaperModel, bool]:
     existing.cited_by_count = max(existing.cited_by_count, paper.cited_by_count)
     existing.doi = existing.doi or _extract_doi(paper.url)
     existing.url = paper.url if paper.url else existing.url
+    existing.source_published_at = paper.published_at if paper.published_at else existing.source_published_at
+    existing.source_updated_at = paper.updated_at if paper.updated_at else existing.source_updated_at
+    existing.journal_name = paper.journal_name if paper.journal_name else existing.journal_name
+    existing.primary_category = paper.primary_category if paper.primary_category else existing.primary_category
+    existing.pdf_url = paper.pdf_url if paper.pdf_url else existing.pdf_url
     existing.latest_score = latest_score
     existing.hot_score = hot_score
     existing.influential_score = influential_score
     existing.final_score = final_score
+    existing.primary_topic = topic_assignment.primary_topic
+    existing.topic_tags = topic_assignment.secondary_topics
     db.flush()
     return existing, False
 

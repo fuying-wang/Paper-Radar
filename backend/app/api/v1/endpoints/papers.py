@@ -19,21 +19,23 @@ router = APIRouter(prefix="/papers", tags=["papers"])
 @router.get("/search", response_model=SearchPapersResponse)
 def search_papers(
     keyword: str = Query(..., min_length=1),
-    sort_by: Literal["latest", "hot", "influential"] = Query("latest"),
+    sort_by: Literal["latest", "hot", "influential", "social_buzz"] = Query("latest"),
+    source: Literal["all", "openalex", "semantic_scholar", "arxiv", "journal"] = Query("all"),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ) -> SearchPapersResponse:
-    papers = search_papers_with_cache(db=db, query=keyword, sort_by=sort_by, limit=limit)
+    papers = search_papers_with_cache(db=db, query=keyword, sort_by=sort_by, limit=limit, source=source)
     return SearchPapersResponse(keyword=keyword, papers=papers)
 
 
 @router.get("/search/trend-summary", response_model=SearchTrendSummaryResponse)
 def get_search_trend_summary(
     keyword: str = Query(..., min_length=1),
+    source: Literal["all", "openalex", "semantic_scholar", "arxiv", "journal"] = Query("all"),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ) -> SearchTrendSummaryResponse:
-    papers = search_papers_with_cache(db=db, query=keyword, sort_by="hot", limit=limit)
+    papers = search_papers_with_cache(db=db, query=keyword, sort_by="hot", limit=limit, source=source)
     trend_summary = generate_trend_summary(papers)
     paper_summaries = summarize_papers(papers)
     return SearchTrendSummaryResponse(

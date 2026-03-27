@@ -1,65 +1,68 @@
 import ResultsClient from "./results-client";
+import { fetchLinkedInWatchlist, fetchPapers, fetchSocialBuzz } from "@/lib/api";
 import { MOCK_PAPERS } from "@/lib/mock-papers";
 
 type ResultsPageProps = {
   searchParams: Promise<{
     query?: string;
+    source?: string;
+    sort_by?: string;
   }>;
 };
 
-type SearchResponse = {
-  keyword: string;
-  papers: Array<{
-    id: string;
-    title: string;
-    authors: string[];
-    venue: string;
-    year: number;
-    abstract: string;
-    cited_by_count: number;
-    url: string;
-    latest_score: number;
-    hot_score: number;
-    influential_score: number;
-    final_score: number;
-  }>;
-};
-
-async function fetchPapers(query: string): Promise<SearchResponse["papers"]> {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (!apiBaseUrl) {
-    return MOCK_PAPERS.map((paper) => ({
-      id: paper.id,
-      title: paper.title,
-      authors: paper.authors,
-      venue: paper.venue,
-      year: paper.year,
-      abstract: paper.abstract,
-      cited_by_count: paper.cited_by_count,
-      url: paper.url,
-      latest_score: paper.latest_score,
-      hot_score: paper.hot_score,
-      influential_score: paper.influential_score,
-      final_score: paper.final_score,
-    }));
+function buildMockPapers(query: string) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const mapped = MOCK_PAPERS.map((paper) => ({
+    id: paper.id,
+    title: paper.title,
+    authors: paper.authors,
+    venue: paper.venue,
+    year: paper.year,
+    abstract: paper.abstract,
+    cited_by_count: paper.cited_by_count,
+    url: paper.url,
+    latest_score: paper.latest_score,
+    hot_score: paper.hot_score,
+    influential_score: paper.influential_score,
+    final_score: paper.final_score,
+    source_name: paper.source_name,
+  }));
+  if (!normalizedQuery) {
+    return mapped;
   }
-
-  const requestUrl = `${apiBaseUrl}/papers/search?keyword=${encodeURIComponent(query)}&sort_by=latest&limit=50`;
-  try {
-    const response = await fetch(requestUrl, { cache: "no-store" });
-    if (!response.ok) {
-      return [];
-    }
-    const payload = (await response.json()) as SearchResponse;
-    return payload.papers ?? [];
-  } catch {
-    return [];
-  }
+  const filtered = mapped.filter((paper) => {
+    const text = `${paper.title} ${paper.abstract} ${paper.venue}`.toLowerCase();
+    return text.includes(normalizedQuery);
+  });
+  return filtered.length > 0 ? filtered : mapped;
 }
 
 export default async function ResultsPage({ searchParams }: ResultsPageProps) {
   const resolvedSearchParams = await searchParams;
   const query = resolvedSearchParams.query?.trim() || "machine learning";
-  const papers = await fetchPapers(query);
-  return <ResultsClient query={query} papers={papers} />;
+  const source = (resolvedSearchParams.source?.trim() || "all") as
+    | "all"
+    | "openalex"
+    | "semantic_scholar"
+    | "arxiv"
+    | "journal";
+  const sortBy = (resolvedSearchParams.sort_by?.trim() || "latest") as
+    | "latest"
+    | "hot"
+    | "influential"
+    | "social_buzz";
+  const apiPapers = await fetchPapers({ query, source, sortBy, limit: 50 });
+  const papers = apiPapers.length > 0 ? apiPapers : buildMockPapers(query);
+  const socialPosts = await fetchSocialBuzz(query);
+  const linkedInWatchlistItems = await fetchLinkedInWatchlist();
+  return (
+    <ResultsClient
+      query={query}
+      source={source}
+      initialSortTab={sortBy}
+      papers={papers}
+      socialPosts={socialPosts}
+      linkedInWatchlistItems={linkedInWatchlistItems}
+    />
+  );
 }

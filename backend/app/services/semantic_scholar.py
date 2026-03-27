@@ -52,7 +52,10 @@ def _compute_scores(year: int, citation_count: int) -> tuple[float, float, float
 
 
 def _to_paper(item: dict[str, Any]) -> Paper:
-    paper_id = _safe_str(item.get("paperId")) or _safe_str(item.get("url")) or "unknown"
+    source_id = _safe_str(item.get("paperId"))
+    if not source_id:
+        source_id = _safe_str(item.get("url")) or "unknown"
+    paper_id = f"semantic_scholar:{source_id}"
     title = _safe_str(item.get("title"))
     authors = _extract_authors(item.get("authors"))
     abstract = _safe_str(item.get("abstract"))
@@ -77,6 +80,8 @@ def _to_paper(item: dict[str, Any]) -> Paper:
         hot_score=hot_score,
         influential_score=influential_score,
         final_score=final_score,
+        source_name="semantic_scholar",
+        source_id=source_id,
     )
 
 

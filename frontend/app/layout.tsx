@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import TopNav from "./_components/top-nav";
 
 export const metadata: Metadata = {
   title: "Research Radar",
@@ -13,7 +14,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="bg-slate-50 text-slate-900">
+        <TopNav />
+        {children}
+      </body>
     </html>
   );
 }
