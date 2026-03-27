@@ -17,10 +17,12 @@ class Settings:
             "machine learning,natural language processing,computer vision",
         )
         self.run_daily_update_on_startup = os.getenv("RUN_DAILY_UPDATE_ON_STARTUP", "false").lower() == "true"
-        self.arxiv_api_url = os.getenv("ARXIV_API_URL", "http://export.arxiv.org/api/query")
+        self.arxiv_api_url = os.getenv("ARXIV_API_URL", "https://export.arxiv.org/api/query")
         self.arxiv_max_results = int(os.getenv("ARXIV_MAX_RESULTS", "50"))
         self.arxiv_sort_by = os.getenv("ARXIV_SORT_BY", "submittedDate")
         self.arxiv_sort_order = os.getenv("ARXIV_SORT_ORDER", "descending")
+        self.http_user_agent = os.getenv("HTTP_USER_AGENT", "paper-radar/0.1 (research)")
+        self.semantic_scholar_api_key = os.getenv("SEMANTIC_SCHOLAR_API_KEY", "")
         default_nature_feeds = {
             "Nature": "https://www.nature.com/nature.rss",
             "Nature Medicine": "https://www.nature.com/nm.rss",

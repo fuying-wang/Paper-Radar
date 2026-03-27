@@ -7,13 +7,14 @@ from typing import Any
 
 import httpx
 
+from app.core.config import settings
 from app.schemas.paper import Paper
 
 
 logger = logging.getLogger(__name__)
 
 SEMANTIC_SCHOLAR_SEARCH_API_URL = "https://api.semanticscholar.org/graph/v1/paper/search"
-DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+DEFAULT_TIMEOUT = httpx.Timeout(20.0, connect=8.0)
 
 
 def _safe_str(value: Any) -> str:
@@ -95,9 +96,12 @@ def fetch_semantic_scholar_papers(query: str, limit: int = 20) -> list[Paper]:
         "limit": safe_limit,
         "fields": "paperId,title,authors,abstract,venue,year,citationCount,url",
     }
+    headers = {"User-Agent": settings.http_user_agent}
+    if settings.semantic_scholar_api_key:
+        headers["x-api-key"] = settings.semantic_scholar_api_key
     try:
         with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
-            response = client.get(SEMANTIC_SCHOLAR_SEARCH_API_URL, params=params)
+            response = client.get(SEMANTIC_SCHOLAR_SEARCH_API_URL, params=params, headers=headers)
             response.raise_for_status()
             payload = response.json()
     except httpx.TimeoutException as exc:

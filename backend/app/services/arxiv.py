@@ -13,7 +13,7 @@ from app.schemas.paper import Paper
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = httpx.Timeout(10.0, connect=5.0)
+DEFAULT_TIMEOUT = httpx.Timeout(20.0, connect=8.0)
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
 
 
@@ -104,15 +104,16 @@ def fetch_arxiv_papers(query: str, limit: int = 20) -> list[Paper]:
         raise ValueError("query cannot be empty")
     safe_limit = max(1, min(limit, settings.arxiv_max_results))
     params = {
-        "search_query": f"all:{cleaned_query}",
+        "search_query": f'all:"{cleaned_query}"',
         "start": 0,
         "max_results": safe_limit,
         "sortBy": settings.arxiv_sort_by,
         "sortOrder": settings.arxiv_sort_order,
     }
+    headers = {"User-Agent": settings.http_user_agent}
     try:
         with httpx.Client(timeout=DEFAULT_TIMEOUT) as client:
-            response = client.get(settings.arxiv_api_url, params=params)
+            response = client.get(settings.arxiv_api_url, params=params, headers=headers)
             response.raise_for_status()
             root = ET.fromstring(response.text)
     except httpx.TimeoutException as exc:
